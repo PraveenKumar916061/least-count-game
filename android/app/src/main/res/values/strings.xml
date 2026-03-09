@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Least Count</string>
+    <string name="title_activity_main">Least Count</string>
+    <string name="package_name">com.leastcount.game</string>
+    <string name="custom_url_scheme">com.leastcount.game</string>
+</resources>

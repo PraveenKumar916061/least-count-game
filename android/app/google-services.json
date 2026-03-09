@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "563651428123",
+    "firebase_url": "https://least-count-playing-cards-default-rtdb.firebaseio.com",
+    "project_id": "least-count-playing-cards",
+    "storage_bucket": "least-count-playing-cards.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:563651428123:android:d46f485cb9dafcc9129dbe",
+        "android_client_info": {
+          "package_name": "com.leastcount.game"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDdijWJt2aySygpi35ZZDEg0GwjcBO50_Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:563651428123:android:33206b7387256aed129dbe",
+        "android_client_info": {
+          "package_name": "com.praveen"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDdijWJt2aySygpi35ZZDEg0GwjcBO50_Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

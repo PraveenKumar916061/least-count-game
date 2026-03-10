@@ -441,10 +441,10 @@ export async function createAIRoom(playerName, numBots = 2) {
 // ── Trigger AI Action ──────────────────────────────────
 export async function triggerAIAction(roomCode) {
   const roomRef = ref(db, `rooms/${roomCode}`);
-  const snap = await get(roomRef);
+  let snap = await get(roomRef);
   if (!snap.exists()) return { success: false, error: "Room not found" };
 
-  const room = snap.val();
+  let room = snap.val();
   if (room.status !== "playing") return { success: false, error: "Game not playing" };
 
   const currentPlayerId = room.currentTurn;
@@ -452,6 +452,8 @@ export async function triggerAIAction(roomCode) {
 
   if (!currentPlayer?.isAI) return { success: false, error: "Not AI turn" };
 
+  snap = await get(roomRef);
+  room = snap.val();
   const hand = room.hands?.[currentPlayerId] || [];
   const topDiscard = room.discardPile?.length > 0 ? room.discardPile[room.discardPile.length - 1] : null;
   const turnPhase = room.turnPhase;

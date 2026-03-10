@@ -89,7 +89,7 @@ function Game() {
       setShowExitConfirm(true);
     };
     
-    window.history.pushState(null, '', window.location.href);
+    window.history.pushState({ inGame: true }, '');
     window.addEventListener('popstate', handlePopState);
     
     return () => {
@@ -189,38 +189,36 @@ function Game() {
     if (!roomData || roomData.status !== "playing") return;
 
     const currentPlayer = roomData.players?.[roomData.currentTurn];
-    if (currentPlayer?.isAI) {
-      if (aiThinking) return;
-      
+    if (!currentPlayer?.isAI) return;
+    if (aiThinking) return;
+
+    const executeAITurn = async () => {
       setAiThinking(true);
-      const timer = setTimeout(async () => {
-        let retries = 0;
-        const attemptAction = async () => {
-          try {
-            const result = await triggerAIAction(roomCode);
-            if (!result.success && retries < 3) {
-              retries++;
-              console.log(`AI action failed (${retries}), retrying...`);
-              await new Promise(r => setTimeout(r, 1000));
-              await attemptAction();
-            }
-          } catch (err) {
-            console.error("AI action error:", err);
-            if (retries < 3) {
-              retries++;
-              await new Promise(r => setTimeout(r, 1000));
-              await attemptAction();
-            }
-          } finally {
-            setAiThinking(false);
+      await new Promise(r => setTimeout(r, 1200));
+      
+      let success = false;
+      for (let attempt = 0; attempt < 3 && !success; attempt++) {
+        try {
+          const result = await triggerAIAction(roomCode);
+          if (result.success) {
+            success = true;
+            console.log("AI action succeeded:", result.action);
+          } else {
+            console.log("AI action failed:", result.error, "attempt:", attempt + 1);
+            await new Promise(r => setTimeout(r, 1000));
           }
-        };
-        await attemptAction();
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
+        } catch (err) {
+          console.error("AI action error:", err);
+          await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+      
+      setAiThinking(false);
+    };
+
+    executeAITurn();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomData?.currentTurn, roomData?.turnPhase, roomData?.status, roomCode]);
+  }, [roomData?.currentTurn]);
 
   if (!roomData || !roomData.hands) {
     return (
@@ -517,7 +515,7 @@ function Game() {
               </button>
               <button className="btn btn-ghost" onClick={() => {
                 setShowExitConfirm(false);
-                window.history.pushState(null, '', window.location.href);
+                window.history.pushState({ inGame: true }, '');
               }}>
                 No
               </button>

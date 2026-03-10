@@ -13,20 +13,21 @@ export function getAIDiscardDecision(hand, topDiscard, roundNumber = 1) {
 
   const rankedGroups = {};
   for (const card of hand) {
-    if (!rankedGroups[card.rank]) rankedGroups[card.rank] = [];
-    rankedGroups[card.rank].push(card);
+    const key = `${card.rank}-${card.suit}`;
+    if (!rankedGroups[key]) rankedGroups[key] = [];
+    rankedGroups[key].push(card);
   }
 
   const validDiscards = [];
-  for (const rank in rankedGroups) {
-    const group = rankedGroups[rank];
+  for (const key in rankedGroups) {
+    const group = rankedGroups[key];
     if (group.length >= 1) {
       const remainingHand = hand.filter((c) => !group.some((gc) => gc.id === c.id));
       const newScore = handScore(remainingHand);
       validDiscards.push({
         cards: group,
         score: newScore,
-        rank,
+        rank: group[0].rank,
       });
     }
   }

@@ -57,13 +57,14 @@ function SortableCard({ card, isSelected, isDiscardable, isSwappable, sameRankAs
 function Game() {
   const { roomCode: paramCode } = useParams();
   const navigate = useNavigate();
-  const { playerId, roomData, roomCode, setRoomCode } = useGame();
+  const { playerId, roomData, roomCode, setRoomCode, leaveRoom } = useGame();
 
   const [selectedCards, setSelectedCards] = useState([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
   const [showDeclareConfirm, setShowDeclareConfirm] = useState(false);
   const [handOrder, setHandOrder] = useState([]);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -178,7 +179,13 @@ function Game() {
       setAiThinking(true);
       const timer = setTimeout(async () => {
         try {
-          await triggerAIAction(roomCode);
+          const result = await triggerAIAction(roomCode);
+          if (!result.success) {
+            console.log("AI action failed, retrying...");
+            setTimeout(async () => {
+              await triggerAIAction(roomCode);
+            }, 1000);
+          }
         } catch (err) {
           console.error("AI action error:", err);
         } finally {
@@ -304,6 +311,9 @@ function Game() {
       {/* Header */}
       <div className="game-header">
         <div className="game-header-left">
+          <button className="btn btn-ghost btn-small" onClick={() => setShowExitConfirm(true)}>
+            Exit
+          </button>
           <span className="round-badge">Round {roomData.roundNumber || 1}</span>
           <span className="room-badge">{roomCode}</span>
         </div>
@@ -463,6 +473,30 @@ function Game() {
 
       {/* Error */}
       {error && <div className="game-error">{error}</div>}
+
+      {/* Exit Confirmation Modal */}
+      {showExitConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Exit Game?</h3>
+            <p>Are you sure you want to exit? Your progress will be lost.</p>
+            <div className="modal-buttons">
+              <button
+                className="btn btn-danger"
+                onClick={() => {
+                  leaveRoom();
+                  navigate("/");
+                }}
+              >
+                Exit Game
+              </button>
+              <button className="btn btn-ghost" onClick={() => setShowExitConfirm(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -512,32 +512,69 @@ export async function triggerAIAction(roomCode) {
     }
 
     const { cards, skipDraw } = getAIDiscardDecision(hand, topDiscard, roundNumber);
-    if (cards.length > 0) {
-      await discardCards(roomCode, currentPlayerId, cards.map((c) => c.id));
+    if (cards && cards.length > 0) {
+      try {
+        await discardCards(roomCode, currentPlayerId, cards.map((c) => c.id));
 
-      if (skipDraw) {
-        const roomSnap = await get(roomRef);
-        const updatedRoom = roomSnap.val();
-        const turnOrder = updatedRoom.turnOrder || [];
-        const currentIdx = turnOrder.indexOf(currentPlayerId);
-        const nextIdx = (currentIdx + 1) % turnOrder.length;
-        await update(roomRef, {
-          currentTurn: turnOrder[nextIdx],
-          turnPhase: "discard",
-        });
-        return { success: true, action: "discard-skip-draw" };
+        if (skipDraw) {
+          const roomSnap = await get(roomRef);
+          const updatedRoom = roomSnap.val();
+          const turnOrder = updatedRoom.turnOrder || [];
+          const currentIdx = turnOrder.indexOf(currentPlayerId);
+          const nextIdx = (currentIdx + 1) % turnOrder.length;
+          await update(roomRef, {
+            currentTurn: turnOrder[nextIdx],
+            turnPhase: "discard",
+          });
+          return { success: true, action: "discard-skip-draw" };
+        }
+
+        return { success: true, action: "discard" };
+      } catch (err) {
+        console.error("Discard failed:", err);
       }
-
-      return { success: true, action: "discard" };
     }
 
-    return { success: false, error: "No valid discard" };
+    const randomCard = hand[Math.floor(Math.random() * hand.length)];
+    if (randomCard) {
+      try {
+        await discardCards(roomCode, currentPlayerId, [randomCard.id]);
+        return { success: true, action: "discard-random" };
+      } catch (err) {
+        console.error("Random discard failed:", err);
+      }
+    }
+
+    try {
+      const turnOrder = room.turnOrder || [];
+      const currentIdx = turnOrder.indexOf(currentPlayerId);
+      const nextIdx = (currentIdx + 1) % turnOrder.length;
+      await update(roomRef, {
+        currentTurn: turnOrder[nextIdx],
+        turnPhase: "discard",
+      });
+      return { success: true, action: "skip" };
+    } catch (err) {
+      console.error("Skip turn failed:", err);
+    }
+
+    return { success: false, error: "No valid action" };
   }
 
   if (turnPhase === "draw") {
-    const drawSource = getAIDrawDecision(hand, topDiscard);
-    await drawCard(roomCode, currentPlayerId, drawSource);
-    return { success: true, action: "draw", source: drawSource };
+    try {
+      const drawSource = getAIDrawDecision(hand, topDiscard);
+      await drawCard(roomCode, currentPlayerId, drawSource);
+      return { success: true, action: "draw", source: drawSource };
+    } catch (err) {
+      console.error("AI draw error:", err);
+      try {
+        await drawCard(roomCode, currentPlayerId, "draw");
+        return { success: true, action: "draw", source: "draw" };
+      } catch (err2) {
+        console.error("AI draw fallback error:", err2);
+      }
+    }
   }
 
   return { success: false, error: "Unknown phase" };

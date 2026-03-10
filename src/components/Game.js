@@ -219,6 +219,7 @@ function Game() {
       }, 1000);
       return () => clearTimeout(timer);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomData?.currentTurn, roomData?.turnPhase, roomData?.status, roomCode]);
 
   if (!roomData || !roomData.hands) {

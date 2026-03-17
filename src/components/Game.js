@@ -306,7 +306,15 @@ function Game() {
           const sameRank = card.rank === firstCard.rank;
           const sameSuit = card.suit === firstCard.suit;
           
+          const RANK_ORDER = { A: 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, J: 11, Q: 12, K: 13 };
+          const selectedRanks = selectedCards.map(c => RANK_ORDER[c.rank]).sort((a, b) => a - b);
+          const cardRank = RANK_ORDER[card.rank];
+          const isConsecutive = selectedRanks.every((r, i) => i === 0 || r === selectedRanks[i - 1] + 1);
+          const isRun = sameSuit && isConsecutive && cardRank === selectedRanks[selectedRanks.length - 1] + 1;
+          
           if (sameRank && sameSuit) {
+            setSelectedCards([...selectedCards, card]);
+          } else if (isRun) {
             setSelectedCards([...selectedCards, card]);
           } else {
             setSelectedCards([card]);
@@ -482,7 +490,7 @@ function Game() {
           </SortableContext>
         </DndContext>
         {isMyTurn && turnPhase === "discard" && selectedCards.length === 0 && (
-          <p className="hand-hint">Select card(s) of the same rank AND suit to drop, or call Show</p>
+          <p className="hand-hint">Select same rank+suit OR consecutive same-suit cards to drop, or call Show</p>
         )}
         {isMyTurn && turnPhase === "discard" && selectedCards.length > 0 && (
           <p className="hand-hint">

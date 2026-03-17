@@ -109,7 +109,7 @@ export async function startGame(roomCode, playerId) {
   return { success: true };
 }
 
-// ── Discard Cards (one or more of same rank) ──────────
+// ── Discard Cards (one or more of same rank OR same suit run) ──────────
 export async function discardCards(roomCode, playerId, cardIds) {
   const roomRef = ref(db, `rooms/${roomCode}`);
 
@@ -131,11 +131,26 @@ export async function discardCards(roomCode, playerId, cardIds) {
       cardsToDiscard.push(found);
     }
 
-    // All cards must share the same rank AND same suit (exact same type)
+    // Option 1: All cards must share the same rank AND same suit (exact same type)
     const firstCard = cardsToDiscard[0];
     const sameRank = cardsToDiscard.every((c) => c.rank === firstCard.rank);
     const sameSuit = cardsToDiscard.every((c) => c.suit === firstCard.suit);
-    if (!sameRank || !sameSuit) return undefined;
+    
+    let isValidRun = false;
+    if (sameSuit && cardsToDiscard.length >= 2) {
+      const RANK_ORDER = { A: 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, J: 11, Q: 12, K: 13 };
+      const ranks = cardsToDiscard.map(c => RANK_ORDER[c.rank]).sort((a, b) => a - b);
+      let isConsecutive = true;
+      for (let i = 1; i < ranks.length; i++) {
+        if (ranks[i] !== ranks[i - 1] + 1) {
+          isConsecutive = false;
+          break;
+        }
+      }
+      isValidRun = isConsecutive;
+    }
+
+    if (!sameRank && !isValidRun) return undefined;
 
     // Remove from hand and add to discard pile
     if (!room.discardPile) room.discardPile = [];
@@ -531,7 +546,16 @@ export async function triggerAIAction(roomCode) {
           return { success: true, action: "discard-skip-draw" };
         }
 
-        return { success: true, action: "discard" };
+        // After discard, proceed to draw phase
+        const roomSnap = await get(roomRef);
+        const updatedRoom = roomSnap.val();
+        const currentHand = updatedRoom.hands?.[currentPlayerId] || [];
+        const newTopDiscard = updatedRoom.discardPile?.length > 0 
+          ? updatedRoom.discardPile[updatedRoom.discardPile.length - 1] 
+          : null;
+        const drawSource = getAIDrawDecision(currentHand, newTopDiscard);
+        await drawCard(roomCode, currentPlayerId, drawSource);
+        return { success: true, action: "discard-then-draw", source: drawSource };
       } catch (err) {
         console.error("Discard failed:", err);
       }
@@ -541,7 +565,17 @@ export async function triggerAIAction(roomCode) {
     if (randomCard) {
       try {
         await discardCards(roomCode, currentPlayerId, [randomCard.id]);
-        return { success: true, action: "discard-random" };
+        
+        // After random discard, proceed to draw phase
+        const roomSnap = await get(roomRef);
+        const updatedRoom = roomSnap.val();
+        const currentHand = updatedRoom.hands?.[currentPlayerId] || [];
+        const newTopDiscard = updatedRoom.discardPile?.length > 0 
+          ? updatedRoom.discardPile[updatedRoom.discardPile.length - 1] 
+          : null;
+        const drawSource = getAIDrawDecision(currentHand, newTopDiscard);
+        await drawCard(roomCode, currentPlayerId, drawSource);
+        return { success: true, action: "discard-random-then-draw", source: drawSource };
       } catch (err) {
         console.error("Random discard failed:", err);
       }

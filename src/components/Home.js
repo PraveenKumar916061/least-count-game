@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGame } from "../hooks/useGame";
 import { createRoom, joinRoom, createAIRoom, startAIRound } from "../utils/roomActions";
@@ -12,6 +12,22 @@ function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [botCount, setBotCount] = useState(2);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  // Browser/mobile back button handler
+  useEffect(() => {
+    const handlePopState = (event) => {
+      event.preventDefault();
+      setShowExitConfirm(true);
+    };
+    
+    window.history.pushState({ inHome: true }, '');
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
 
   const handleCreate = async () => {
     if (!playerName.trim()) {
@@ -184,6 +200,7 @@ function Home() {
               <li>Each player gets <strong>7 cards</strong>. Goal: have the <strong>lowest total points</strong>.</li>
               <li>On your turn: first <strong>drop</strong> card(s), then <strong>pick</strong> a card from deck or discard pile.</li>
               <li>If you have multiple cards of the <strong>same rank</strong>, you can drop them all at once.</li>
+              <li>You can also drop <strong>consecutive cards of the same suit</strong> (like 5♠ 6♠ 7♠).</li>
               <li>You can <strong>swap</strong> a card from your hand with the top card of the discard pile.</li>
               <li>Card values: A=1, 2-10=face value, J=11, Q=12, K=13.</li>
               <li>When your hand value is <strong>below 7</strong>, you can call <strong>"Show"</strong> to declare.</li>
@@ -193,6 +210,33 @@ function Home() {
           </details>
         </div>
       </div>
+
+      {/* Exit Confirmation Modal */}
+      {showExitConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Exit App?</h3>
+            <p>Are you sure you want to exit?</p>
+            <div className="modal-buttons">
+              <button
+                className="btn btn-danger"
+                onClick={() => {
+                  window.history.pushState({ inHome: true }, '');
+                  setShowExitConfirm(false);
+                }}
+              >
+                No
+              </button>
+              <button className="btn btn-ghost" onClick={() => {
+                window.history.pushState({ inHome: true }, '');
+                setShowExitConfirm(false);
+              }}>
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

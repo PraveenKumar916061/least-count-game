@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGame } from "../hooks/useGame";
-import { drawCard, discardCards, declare, triggerAIAction } from "../utils/roomActions";
+import { drawCard, discardCards, declare, triggerAIAction, swapCard } from "../utils/roomActions";
 import {
   DndContext,
   closestCenter,
@@ -22,7 +22,7 @@ import Card from "./Card";
 import PlayerList from "./PlayerList";
 import GameOver from "./GameOver";
 
-function SortableCard({ card, isSelected, isDiscardable, isSwappable, sameRankAsSelected, onClick }) {
+function SortableCard({ card, isSelected, isDiscardable, isSwappable, sameRankAsSelected, onClick, onSwap }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: card.id,
   });
@@ -46,7 +46,11 @@ function SortableCard({ card, isSelected, isDiscardable, isSwappable, sameRankAs
       } ${isDragging ? "sortable-drag" : ""}`}
       onClick={(e) => {
         e.stopPropagation();
-        onClick();
+        if (isSwappable) {
+          onSwap();
+        } else {
+          onClick();
+        }
       }}
     >
       <Card card={card} faceUp />
@@ -290,6 +294,19 @@ function Game() {
     }
   };
 
+  const handleSwap = async (cardId) => {
+    if (!isMyTurn || turnPhase !== "discard") return;
+    setActionLoading(true);
+    setError("");
+    try {
+      await swapCard(roomCode, playerId, cardId);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleCardClick = (card) => {
     if (!isMyTurn) return;
 
@@ -480,9 +497,10 @@ function Game() {
                     card={card}
                     isSelected={isSelected}
                     isDiscardable={isDiscardable}
-                    isSwappable={false}
+                    isSwappable={isMyTurn && turnPhase === "discard" && topDiscard && card.rank === topDiscard.rank && card.suit === topDiscard.suit}
                     sameRankAsSelected={sameRankAsSelected}
                     onClick={() => handleCardClick(card)}
+                    onSwap={() => handleSwap(card.id)}
                   />
                 );
               })}
@@ -490,7 +508,9 @@ function Game() {
           </SortableContext>
         </DndContext>
         {isMyTurn && turnPhase === "discard" && selectedCards.length === 0 && (
-          <p className="hand-hint">Select same rank+suit OR consecutive same-suit cards to drop, or call Show</p>
+          <p className="hand-hint">
+            {topDiscard ? "Click matching card to drop directly, or select same rank to drop" : "Select same rank OR consecutive same-suit cards to drop, or call Show"}
+          </p>
         )}
         {isMyTurn && turnPhase === "discard" && selectedCards.length > 0 && (
           <p className="hand-hint">

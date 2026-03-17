@@ -13,21 +13,21 @@ export function getAIDiscardDecision(hand, topDiscard, roundNumber = 1) {
 
   const rankedGroups = {};
   for (const card of hand) {
-    const key = `${card.rank}-${card.suit}`;
+    const key = card.rank;
     if (!rankedGroups[key]) rankedGroups[key] = [];
     rankedGroups[key].push(card);
   }
 
   const validDiscards = [];
-  for (const key in rankedGroups) {
-    const group = rankedGroups[key];
+  for (const rank in rankedGroups) {
+    const group = rankedGroups[rank];
     if (group.length >= 1) {
       const remainingHand = hand.filter((c) => !group.some((gc) => gc.id === c.id));
       const newScore = handScore(remainingHand);
       validDiscards.push({
         cards: group,
         score: newScore,
-        rank: group[0].rank,
+        rank: rank,
       });
     }
   }
@@ -38,7 +38,7 @@ export function getAIDiscardDecision(hand, topDiscard, roundNumber = 1) {
 
   const bestOption = validDiscards[0];
   const hasMatchWithDiscard = topDiscard && bestOption.cards.some(
-    (c) => c.rank === topDiscard.rank
+    (c) => c.rank === topDiscard.rank && c.suit === topDiscard.suit
   );
 
   return {
@@ -51,8 +51,8 @@ export function getAIDrawDecision(hand, topDiscard) {
   if (!hand || hand.length === 0) return "draw";
 
   if (topDiscard) {
-    const hasMatchingRank = hand.some((c) => c.rank === topDiscard.rank);
-    if (hasMatchingRank) {
+    const hasExactMatch = hand.some((c) => c.rank === topDiscard.rank && c.suit === topDiscard.suit);
+    if (hasExactMatch) {
       return "discard";
     }
   }

@@ -131,25 +131,29 @@ export async function discardCards(roomCode, playerId, cardIds) {
       cardsToDiscard.push(found);
     }
 
-    // Option 1: All cards must share the same rank AND same suit (exact same type)
+    // Option 1: All cards must share the same rank (Set)
     const firstCard = cardsToDiscard[0];
     const sameRank = cardsToDiscard.every((c) => c.rank === firstCard.rank);
-    const sameSuit = cardsToDiscard.every((c) => c.suit === firstCard.suit);
     
+    // Option 2: Same suit consecutive run (e.g., 3♥ 4♥ 5♥)
     let isValidRun = false;
-    if (sameSuit && cardsToDiscard.length >= 2) {
-      const RANK_ORDER = { A: 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, J: 11, Q: 12, K: 13 };
-      const ranks = cardsToDiscard.map(c => RANK_ORDER[c.rank]).sort((a, b) => a - b);
-      let isConsecutive = true;
-      for (let i = 1; i < ranks.length; i++) {
-        if (ranks[i] !== ranks[i - 1] + 1) {
-          isConsecutive = false;
-          break;
+    if (cardsToDiscard.length >= 2) {
+      const sameSuit = cardsToDiscard.every((c) => c.suit === firstCard.suit);
+      if (sameSuit) {
+        const RANK_ORDER = { A: 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, J: 11, Q: 12, K: 13 };
+        const ranks = cardsToDiscard.map(c => RANK_ORDER[c.rank]).sort((a, b) => a - b);
+        let isConsecutive = true;
+        for (let i = 1; i < ranks.length; i++) {
+          if (ranks[i] !== ranks[i - 1] + 1) {
+            isConsecutive = false;
+            break;
+          }
         }
+        isValidRun = isConsecutive;
       }
-      isValidRun = isConsecutive;
     }
 
+    // Valid if same rank (Set) OR valid run (consecutive same suit)
     if (!sameRank && !isValidRun) return undefined;
 
     // Remove from hand and add to discard pile

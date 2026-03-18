@@ -10,6 +10,10 @@ const CARD_VALUES = {
   "8": 8, "9": 9, "10": 10, J: 11, Q: 12, K: 13,
 };
 
+function getSuitColor(suit) {
+  return suit === "♥" || suit === "♦" ? "red" : "black";
+}
+
 function handScore(hand) {
   if (!hand) return 0;
   return hand.reduce((s, c) => s + (CARD_VALUES[c.rank] || 0), 0);
@@ -131,9 +135,12 @@ export async function discardCards(roomCode, playerId, cardIds) {
       cardsToDiscard.push(found);
     }
 
-    // Option 1: All cards must share the same rank (Set)
+    // Option 1: All cards must share the same rank AND same color (Set)
     const firstCard = cardsToDiscard[0];
-    const sameRank = cardsToDiscard.every((c) => c.rank === firstCard.rank);
+    const firstColor = getSuitColor(firstCard.suit);
+    const sameRankAndColor = cardsToDiscard.every(
+      (c) => c.rank === firstCard.rank && getSuitColor(c.suit) === firstColor
+    );
     
     // Option 2: Same suit consecutive run (e.g., 3♥ 4♥ 5♥)
     let isValidRun = false;
@@ -153,8 +160,8 @@ export async function discardCards(roomCode, playerId, cardIds) {
       }
     }
 
-    // Valid if same rank (Set) OR valid run (consecutive same suit)
-    if (!sameRank && !isValidRun) return undefined;
+    // Valid if same rank AND same color (Set) OR valid run (consecutive same suit)
+    if (!sameRankAndColor && !isValidRun) return undefined;
 
     // Remove from hand and add to discard pile
     if (!room.discardPile) room.discardPile = [];
@@ -205,6 +212,13 @@ export async function drawCard(roomCode, playerId, source) {
     if (!room.hands) room.hands = {};
     if (!room.hands[playerId]) room.hands[playerId] = [];
     room.hands[playerId].push(card);
+
+    // Track if card was drawn from discard pile
+    if (source === "discard") {
+      room.lastDrawnDiscardCard = { rank: card.rank, suit: card.suit };
+    } else {
+      room.lastDrawnDiscardCard = null;
+    }
 
     // After drawing, turn ends -- move to next player
     const turnOrder = room.turnOrder || [];

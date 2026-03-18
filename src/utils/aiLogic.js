@@ -3,6 +3,10 @@ const CARD_VALUES = {
   "8": 8, "9": 9, "10": 10, J: 11, Q: 12, K: 13,
 };
 
+function getSuitColor(suit) {
+  return suit === "♥" || suit === "♦" ? "red" : "black";
+}
+
 const handScore = (hand) => {
   if (!hand) return 0;
   return hand.reduce((s, c) => s + (CARD_VALUES[c.rank] || 0), 0);
@@ -13,21 +17,21 @@ export function getAIDiscardDecision(hand, topDiscard, roundNumber = 1) {
 
   const rankedGroups = {};
   for (const card of hand) {
-    const key = card.rank;
+    const key = card.rank + "_" + getSuitColor(card.suit);
     if (!rankedGroups[key]) rankedGroups[key] = [];
     rankedGroups[key].push(card);
   }
 
   const validDiscards = [];
-  for (const rank in rankedGroups) {
-    const group = rankedGroups[rank];
+  for (const key in rankedGroups) {
+    const group = rankedGroups[key];
     if (group.length >= 1) {
       const remainingHand = hand.filter((c) => !group.some((gc) => gc.id === c.id));
       const newScore = handScore(remainingHand);
       validDiscards.push({
         cards: group,
         score: newScore,
-        rank: rank,
+        rank: group[0].rank,
       });
     }
   }

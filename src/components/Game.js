@@ -242,6 +242,12 @@ function Game() {
   const drawPileCount = roomData.drawPile ? roomData.drawPile.length : 0;
   const currentPlayerName = roomData.players?.[roomData.currentTurn]?.name || "...";
   const turnOrder = roomData.turnOrder || [];
+  const lastDrawnDiscardCard = roomData.lastDrawnDiscardCard;
+
+  // Check if player can skip draw (has matching card with last drawn from discard)
+  const canSkipDraw = lastDrawnDiscardCard && myHand.some(
+    (c) => c.rank === lastDrawnDiscardCard.rank && c.suit === lastDrawnDiscardCard.suit
+  );
 
   // Calculate my hand score
   const CARD_VALUES = {
@@ -259,6 +265,19 @@ function Game() {
     setError("");
     try {
       await drawCard(roomCode, playerId, source);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSkipDraw = async () => {
+    if (!isMyTurn || turnPhase !== "discard" || !canSkipDraw) return;
+    setActionLoading(true);
+    setError("");
+    try {
+      await discardCards(roomCode, playerId, [lastDrawnDiscardCard.rank + lastDrawnDiscardCard.suit]);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -307,6 +326,10 @@ function Game() {
     }
   };
 
+  const getSuitColor = (suit) => {
+    return suit === "♥" || suit === "♦" ? "red" : "black";
+  };
+
   const handleCardClick = (card) => {
     if (!isMyTurn) return;
 
@@ -320,7 +343,9 @@ function Game() {
           setSelectedCards([card]);
         } else {
           const firstCard = selectedCards[0];
+          const firstColor = getSuitColor(firstCard.suit);
           const sameRank = card.rank === firstCard.rank;
+          const sameColor = getSuitColor(card.suit) === firstColor;
           const sameSuit = card.suit === firstCard.suit;
           
           const RANK_ORDER = { A: 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, J: 11, Q: 12, K: 13 };
@@ -328,8 +353,9 @@ function Game() {
           const cardRank = RANK_ORDER[card.rank];
           const isConsecutive = selectedRanks.every((r, i) => i === 0 || r === selectedRanks[i - 1] + 1);
           const isRun = sameSuit && isConsecutive && cardRank === selectedRanks[selectedRanks.length - 1] + 1;
+          const isSameRankAndColor = sameRank && sameColor;
           
-          if (sameRank && sameSuit) {
+          if (isSameRankAndColor) {
             setSelectedCards([...selectedCards, card]);
           } else if (isRun) {
             setSelectedCards([...selectedCards, card]);
@@ -421,6 +447,21 @@ function Game() {
           <span className="pile-label">Discard Pile</span>
         </div>
       </div>
+
+      {/* Skip Draw option - when player has matching card with last drawn from discard */}
+      {isMyTurn && turnPhase === "discard" && canSkipDraw && (
+        <div className="action-section">
+          <div className="action-buttons">
+            <button
+              className="btn btn-primary"
+              onClick={handleSkipDraw}
+              disabled={actionLoading}
+            >
+              {actionLoading ? "Playing..." : `Drop matching ${lastDrawnDiscardCard.rank}${lastDrawnDiscardCard.suit} (Skip Draw)`}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Action Buttons - only on your turn during discard phase */}
       {isMyTurn && turnPhase === "discard" && (
